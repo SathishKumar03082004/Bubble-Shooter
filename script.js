@@ -94,7 +94,7 @@ function rotatePoint(x,y,angle){
             }
 
         function getNeighbors(bubble){
-            const neighbors=[],
+            const neighbors=[];
 
             const dirs=[
                 rotatePoint(grid,0,0),
@@ -147,4 +147,196 @@ function rotatePoint(x,y,angle){
             }
         }
 
-        
+        //continue 11:07
+
+        function dropFloatingBubbles(){
+            const activeBubbles = bubbles.filter(bubble=>bubble.active);
+            activeBubbles.forEach(bubble=>bubble.processed=false);
+
+            let neighbors=activeBubbles.filter(bubble=>bubble.y-grid<=wallSize);
+
+            for(let i=0;i<neighbors.length;i++){
+                let neighbor=neighbors[i];
+
+                if(!neighbor.processed){
+                    neighbor.processed=true;
+                    neighbors=neighbors.concat(getNeighbors(neighbor));
+                }
+            }
+
+            activeBubbles.filter(bubble=>!bubble.processed)
+            .forEach(bubble=>{
+                bubble.active=false;
+                particles.push({
+                    x:bubble.x,
+                    y:bubble.y,
+                    color:bubble.color,
+                    radius:bubble.radius,
+                    active:true});
+            });
+        }
+
+        for(let row=0;row<10;row++){
+            for(let col=0;col<(row%2===0?8:7);col++){
+                const color = level1[row]?.[col];
+                createBubble(col*grid,row*grid,colorMap[color]);
+            }
+        }
+
+        const curBubblePos={
+            x:canvas.width/2,
+            y:canvas.height-grid*1.5
+        };
+
+        const curBubble={
+            x:curBubblePos.x,
+            y:curBubblePos.y,
+            color:'red',
+            radius:grid/2,
+            speed:8,
+            dx:0,
+            dy:0
+        };
+
+        let shootDeg=0;
+
+        const minDeg=degToRad(-60);
+        const maxDeg=degToRad(60);
+
+        let shootDir=0;
+
+        function getNewBubble(){
+            curBubble.x=curBubblePos.x;
+            curBubble.y=curBubblePos.y;
+            curBubble.dx=curBubble.dy=0;
+
+            const randInt = getRandomInt(0,colors.length-1);
+            curBubble.color=colors[randInt];
+        }
+
+        function handleCollision(bubble){
+            bubble.color=curBubble.color;
+            bubble.active=true;
+            getNewBubble();
+            removeMatch(bubble);
+            dropFloatingBubbles();
+        }
+
+
+        function loop(){
+            requestAnimationFrame(loop);
+            context.clearRect(0,0,canvas.width,canvas.height);
+
+            shootDeg=shootDeg+degToRad(2)*shootDir;
+
+            if(shootDeg<minDeg){
+                shootDeg=minDeg;
+            }
+            else if(shootDeg>maxDeg){
+                shootDeg=maxDeg;
+            }
+
+            curBubble.x+=curBubble.dx;
+            curBubble.y+=curBubble.dy;
+
+            if(curBubble.x-grid/2<wallSize){
+                curBubble.x=wallSize+grid/2;
+                curBubble.dx*=-1;
+            }
+            else if(curBubble.x+grid/2 > canvas.width-wallSize){
+                curBubble.x=canvas.width-wallSize-grid/2;
+                curBubble.dx*=-1;
+            }
+
+
+            if(curBubble.y-grid/2<wallSize){
+                const closestBubble = getClosestBubble(curBubble);
+                handleCollision(closestBubble);
+            }
+
+            for(let i=0;i<bubbles.length;i++){
+                const bubble=bubbles[i];
+
+                if(bubble.active && collides(curBubble,bubble)){
+                    const closestBubble=getClosestBubble(curBubble);
+                    if(!closestBubble){
+                        window.alert('Game over');
+                        window.location.reload();
+                    }
+
+                    if(closestBubble){
+                        handleCollision(closestBubble);
+                    }
+                }
+            }
+
+            particles.forEach(particle=>{
+                particle.y+=8;
+            });
+
+            particles=particles.filter(particles=>particles.y < canvas.height-grid/2);
+
+            context.fillStyle = 'lightgrey';
+            context.fillRect(0,0,canvas.width,wallSize);
+            context.fillRect(0,0,wallSize,canvas.height);
+            context.fillRect(canvas.width-wallSize,0,wallSize,canvas.height);
+
+            bubbles.concat(particles).forEach(bubble=>{
+                if(!bubble.active) return;
+                context.fillStyle=bubble.color;
+
+                context.beginPath();
+                context.arc(bubble.x,bubble.y,bubble.radius,0,2,Math.PI);
+                context.fill();
+            });
+
+            context.save();
+
+            context.translate(curBubblePos.x,curBubblePos.y);
+            context.rotate(shootDeg);
+
+            context.translate(0,-grid/2*4.5);
+
+            context.strokeStyle='white';
+            context.lineWidth=2;
+            context.beginPath();
+            context.moveTo(0,0);
+            context.lineTo(0,grid*2);
+            context.moveTo(0,0);
+            context.lineTo(-10,grid*0.4);
+            context.moveTo(0,0);
+            context.lineTo(10,grid*0.4);
+            context.stroke();
+
+            context.restore();
+
+
+            context.fillStyle=curBubble.color;
+            context.beginPath();
+            context.arc(curBubble.x,curBubble.y,curBubble.radius,0,2*Math.PI);
+            context.fill();
+        }
+
+        document.addEventListener('keydown',(e)=>{
+            if(e.code==='ArrowLeft'){
+                shootDir=-1;
+            }
+            else if(e.code==='ArrowRight'){
+                shootDir=1;
+            }
+
+
+            if(e.code=='Space' && curBubble.dx===0 && curBubble.dy===0){
+                curBubble.dx=Math.sin(shootDeg)*curBubble.speed;
+                curBubble.dy=-Math.cos(shootDeg)*curBubble.speed;
+            }
+        });
+
+
+        document.addEventListener('keyup',(e) => {
+            if((e.code==='ArrowLeft' && shootDir===-1)|| (e.code==='ArrowRight' && shootDir===1)){
+                shootDir=0;
+            }
+        });
+
+        requestAnimationFrame(loop);
