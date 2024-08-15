@@ -1,203 +1,150 @@
 
-window.onload=function(){
-    var canvas = document.getElementById("viewport");
-    var context = canvas.getContext("2d");
-
-    var lastframe =0;
-    var fpstime=0;
-    var framecount=0;
-    var fps=0;
-
-    var initialized=false;
-
-    var level={
-        x: 4,
-        y: 83,
-        width: 0,
-        height: 0,
-        columns: 15,
-        rows: 14,
-        tilewidth: 40,
-        tileheight: 40,
-        rowheight: 34,
-        radius: 20,
-        tiles: []
-    };
-
-    var Tile=function(x,y,type,shift){
-        this.x=x;
-        this.y=y;
-        this.type=type;
-        this.removed=false;
-        this.shift=shift;
-        this.velocity=0;
-        this.alpha=1;
-        this.processed=false;
-    };
-
-    var player={
-        x:0,
-        y:0,
-        angle: 0,
-        tiletype:0,
-        bubble:{
-            x:0,
-            y:0,
-            angle: 0,
-            speed: 1000,
-            dropspeed: 900,
-            tiletype: 0,
-            visible: false
-        },
-
-        nextbubble:{
-            x:0,
-            y:0,
-            tiletype:0
-        }
-    };
-
-    var neighborsoffsets = [[[1,0],[0,1] ,[-1,1] ,[-1.0], [-1,-1],[0,-1]],
-                            [[1,0], [1,1], [0,1], [-1,0], [0,-1], [1,-1]]];
+const canvas = document.getElementById('game');
+const context = canvas.getContext('2d');
 
 
-    var bubblecolors=7;
+const grid=32;
 
-    var gamestates={init:0, ready:1, shootbubble:2, removecluster:3, gameover:4};
-    var gamestate =gamestates.init;
-
-    var score=0;
-
-    var turncounter=0;
-    var rowoffset=0;
-
-    var animationstate=0;
-    var animationtime=0;
-
-    var showcluster=false;
-    var cluster=[];
-    var floatingclusters=[];
+const level1=[
+    ['R','R','Y','Y','B','B','G','G'],
+    ['R','R','Y','Y','B','B','G'],
+    ['B','B','G','G','R','R','Y','Y'],
+    ['B','G','G','R','R','Y','Y']
+];
 
 
-    var images=[];
-    var bubbleimage;
-    
-    var loadcount=0;
-    var loadtotal=0;
-    var preloaded=false;
+const colorMap={
+    'R': 'red',
+    'G': 'green',
+    'B': 'blue',
+    'Y': 'yellow'
+};
 
-    function loadImages(imagefiles){
-        loadcount=0;
-        loadtotal=imagefiles.length;
-        preloaded=false;
+const colors = Object.values(colorMap);
+const bubbleGap=1;
 
-        var loadedImages=[];
-        for(var i=0;i<imagefiles.length;i++){
-            var image=new Image();
+const wallSize=4;
+const bubbles=[];
+let particles=[];
 
-            image.onload=function(){
-                loadcount++;
-                if(loadcount==loadtotal){
-                    preloaded=true;
-                }
-            };
-
-            image.src= imagefiles[i];
-            loadImages[i]=image;
-        }
-
-        return loadedImages;
-    }
-
-    function init(){
-
-        images = loadImages(["https://github.com/shaongithub/bubble-game/blob/main/buble-ball.png?raw=true"]);
-        bubbleimage=images[0];
-
-        canvas.addEventListener("mousemove",onMouseMove);
-        canvas.addEventListener("mousedown",onMouseDown);
-
-        for(var i=0;i<level.columns; i++){
-            level.tiles[i]=[];
-            for(var j=0;j<level.rows;j++){
-                level.tiles[i][j]=new Tile(i,j,0,0);
-            }
-        }
-
-        level.width=level.columns*level.tilewidth+level.tilewidth/2;
-        level.height=(level.rows-1)*level.rowheight+level.tileheight;
-
-        player.x=level.x+level.width/2-level.tilewidth/2;
-        player.y=level.y+level.height;
-        player.angle=90;
-        player.tiletype=0;
-
-        player.nextbubble.x=player.x-2*level.tilewidth;
-        player.nextbubble.y=player.y;
-
-        newGame();
-
-        main(0);
-    }
-
-    function main(tframe){
-        window.requestAnimationFrame(main);
-
-        if(!initialized){
-            context.clearReact(0,0,canvas.width,canvas.height);
-
-            drawFrame();
-
-            var loadpercentage = loadcount/loadtotal;
-            context.strokeStyle = "#56c204";
-            context.lineWidth=3;
-            context.strokeRect(18.5, 0.5 + canvas.height - 51, canvas.width-37, 32);
-            context.fillStyle = "#56c204";
-            context.fillRect(18.5, 0.5 + canvas.height - 51, loadpercentage*(canvas.width-37), 32);
-
-            var loadtext="Loaded "+loadcount+"/"+loadtotal+" images";
-            context.fillStyle="#000000";
-            context.font="16px Verdana";
-            context.fillText(loadtext,18,0.5,+canvas.height-63);
-
-            if(preloaded){
-                setTimeout(function(){initialized=true;},1000);
-            }
-            else{
-                PaymentRequestUpdateEvent(tframe);
-                render();
-            }
-        }
-
-        function update(tframe){
-            var dt=(tframe-lastframe)/1000;
-            lastframe=tframe;
-
-            updateFps(dt);
-
-            if(gamestate==gamestates.ready){
-                
-            }
-            else if(gamestate==gamestates.shootbubble){
-                stateShootBubble(dt);
-            }
-            else if(gamestate==gamestates.removecluster){
-                stateRemoveCluster(dt);
-            }
-        }
-
-        function setGameState(newgamestate){
-            gamestate=newgamestate;
-
-            animationstate=0;
-            animationtime=0;
-        }
-
-        function stateShootBubble(dt){
-            player.bubble.x+=dt*player.bubble.speed*Math.cos(degToRad(player.bubble.angle));
-            player.bubble.y+=dt*player.bubble.speed*-1*Math.sin(degToRad(player.bubble.angle));
-
-            
-        }
-    }
+function degToRad(deg){
+    return (deg*Math.PI)/180;
 }
+
+
+function rotatePoint(x,y,angle){
+    let sin=Math.sin(angle);
+    let cos=Math.cos(angle);
+
+    return{
+        x: x*cos-y*sin,
+        y: x*sin+y*cos};
+    }
+
+
+    function getRandomInt(min,max){
+        min=Math.ceil(min);
+        max=Math.floor(max);
+
+        return Math.floor(Math.random()*(max-min+1))+min;
+    }
+
+    function getDistance(obj1,obj2){
+        const distx=obj1.x-obj2.x;
+        const disty=obj1.y-obj2.y;
+        return Math.sqrt(distx*distx+disty*disty);
+    }
+
+    function collides(obj1,obj2){
+        return getDistance(obj1,obj2)<obj1.radius+obj2.radius;
+    }
+
+
+    function getClosestBubble(obj,activeState=false){
+        const closestBubbles = bubbles.filter(bubble=>bubble.active==activeState && collides(obj, bubble));
+
+        if(!closestBubbles.length){
+            return;
+        }
+
+        return closestBubbles
+        .map(bubble=>{
+            return{
+                distance: getDistance(obj, bubble),
+                bubble}
+            })
+            .sort((a,b)=>a.distance-b.distance)[0].bubble;
+        }
+
+
+        function createBubble(x,y,color){
+            const row=Math.floor(y/grid);
+            const col=Math.floor(x/grid);
+
+            const startX=row%2===0 ? 0:0.5*grid;
+
+            const center=grid/2;
+
+            bubbles.push({
+                x:wallSize+(grid+bubbleGap)*col+startX+center,
+                y:wallSize+(grid+bubbleGap-4)*row+center,
+                radius:grid/2,
+                color:color,
+                active:color?true:false});
+            }
+
+        function getNeighbors(bubble){
+            const neighbors=[],
+
+            const dirs=[
+                rotatePoint(grid,0,0),
+                rotatePoint(grid,0,degToRad(60)),
+                rotatePoint(grid,0,degToRad(120)),
+                rotatePoint(grid,0,degToRad(180)),
+                rotatePoint(grid,0,degToRad(240)),
+                rotatePoint(grid,0,degToRad(300))
+            ];
+
+            for(let i=0;i<dirs.length;i++){
+                const dir=dirs[i];
+
+                const newBubble={
+                    x:bubble.x+dir.x,
+                    y:bubble.y+dir.y,
+                    radius:bubble.radius};
+                    const neighbor = getClosestBubble(newBubble,true);
+                    if(neighbor && neighbor!== bubble && !neighbors.includes(neighbor)){
+                        neighbors.push(neighbor);
+                    }
+            }
+            return neighbors;
+        }
+
+        function removeMatch(targetBubble){
+            const matches=[targetBubble];
+
+            bubbles.forEach(bubble=>bubble.processed=false);
+            targetBubble.processed=true;
+
+            let neighbors=getNeighbors(targetBubble);
+            for(let i=0;i<neighbors.length;i++){
+                let neighbor = neighbors[i];
+
+                if(!neighbor.processed){
+                    neighbor.processed=true;
+
+                    if(neighbor.color===targetBubble.color){
+                        matches.push(neighbor);
+                        neighbors=neighbors.concat(getNeighbors(neighbor));
+                    }
+                }
+            }
+
+            if(matches.length>=3){
+                matches.forEach(bubble=>{
+                    bubble.active=false;
+                });
+            }
+        }
+
+        
