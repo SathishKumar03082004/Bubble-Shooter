@@ -340,3 +340,46 @@ function rotatePoint(x,y,angle){
         });
 
         requestAnimationFrame(loop);
+
+
+// let touchStartX = 0;
+// let touchStartY = 0;
+// let touchEndX = 0;
+// let touchEndY = 0;
+// let touchMoved = false;
+
+// function handleTouchStart(e) {
+//     touchStartX = e.touches[0].clientX;
+//     touchStartY = e.touches[0].clientY;
+//     touchMoved = false;
+// }
+
+// function handleTouchMove(e) {
+//     touchEndX = e.touches[0].clientX;
+//     touchEndY = e.touches[0].clientY;
+//     touchMoved = true;
+
+//     const dx = touchEndX - touchStartX;
+//     const dy = touchEndY - touchStartY;
+
+//     if (Math.abs(dx) > Math.abs(dy)) {
+//         shootDir = dx > 0 ? 1 : -1; // Move right or left
+//     }
+// }
+
+// function handleTouchEnd(e) {
+//     if (!touchMoved) {
+//         // If the touch didn't move much, consider it a tap and shoot the bubble
+//         if (curBubble.dx === 0 && curBubble.dy === 0) {
+//             curBubble.dx = Math.sin(shootDeg) * curBubble.speed;
+//             curBubble.dy = -Math.cos(shootDeg) * curBubble.speed;
+//         }
+//     }
+
+//     // Reset shootDir when the touch ends
+//     shootDir = 0;
+// }
+
+// document.addEventListener('touchstart', handleTouchStart);
+// document.addEventListener('touchmove', handleTouchMove);
+// document.addEventListener('touchend', handleTouchEnd);
